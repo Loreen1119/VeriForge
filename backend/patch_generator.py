@@ -208,30 +208,87 @@ def _build_user_prompt(ctx: PatchGenerationContext, retry_reason: str | None = N
             "重新生成时必须满足：\n"
             "- 每一行上下文都要从上面的 Source context 原样复制，不改写、不补全、不臆造；\n"
             "- 每个 hunk 头声明的行数必须与该 hunk 内实际的行数一致，且 hunk 内必须真有增删行；\n"
-            "- 只允许在 Source context 覆盖的行区间内改动；需要的行没被提供时，用已提供的行做最小改动。\n"
+            "- 只允许在 Source context 或提示中回喂的真实文件内容覆盖的行区间内改动；"
+            "需要的行没被提供时，用已提供的行做最小改动；\n"
+            "- Proposed changes 列出的每个文件都要做出其实质改动，一个都不能漏；"
+            "禁止用注释、noqa、空改动等无语义方式凑「触达」。\n"
             "请输出修正后的 unified diff。"
         )
     return "\n".join(lines)
 
 
-def _self_check(ctx: PatchGenerationContext, diff: str, attempt: int, notes: list[str]) -> str:
-    """生成期自检：先在临时 worktree 上试打一次，不可应用就把 git 报错回喂重试。
-
-    为什么放在生成器而不是 apply 接口：跑批与产品都走同一个生成器，而 apply 是下游；
-    等 apply 才发现问题，模型已经没有第二次机会。ctx.git_root 为空时完全跳过（测试、Fake 生成器）。
-    """
-    git_root = getattr(ctx, 'git_root', '') or ''
-    if not git_root:
-        return ''
+def _read_repo_file(git_root: str, rel_path: str, max_lines: int = 120) -> str:
+    """回读仓库里某文件的真实内容（自检回喂用）。任何失败返回 ''，绝不阻断生成。"""
+    import os
+    path = os.path.join(git_root, rel_path.replace('/', os.sep))
     try:
-        from worktree_service import probe_apply
-        probe = probe_apply(git_root, ctx.base_commit, diff, tag=f"t{ctx.task_id}-{attempt}")
-    except Exception:  # 自检设施故障绝不能阻断生成
+        with open(path, encoding='utf-8', errors='replace') as fh:
+            lines = fh.readlines()
+    except Exception:
         return ''
-    if probe.get('ok'):
-        return ''
-    notes.append(f"第 {attempt + 1} 次生成的补丁无法应用，已带 git 报错与真实上下文重试")
-    return probe.get('hint') or probe.get('error') or '补丁无法应用，请重新生成'
+    text = ''.join(lines[:max_lines])
+    if len(lines) > max_lines:
+        text += f"\n... (共 {len(lines)} 行，此处截断到前 {max_lines} 行)"
+    return text
+
+
+def _self_check_detail(ctx: PatchGenerationContext, diff: str, attempt: int,
+                       notes: list[str]) -> tuple[str, bool]:
+    """生成期自检：完备性（plan 文件全覆盖）+ 可应用性（临时 worktree 试打）。
+
+    返回 (hint, probe_ok)：hint 为空 = 自检全过；probe_ok=False 表示补丁打不上。
+
+    - 完备性：补丁须触达 plan.proposed_changes 全部文件。未触达时把**该文件真实内容
+      回喂**并允许在回读内容覆盖处改动（与 probe hint 同思路）。为什么必须回喂：
+      5A 实测（BENCHMARK §5.2.1）证明「必须改所有文件」与「只改已提供行区间」在
+      无上下文文件上可行域为空，模型只能用注释/noqa/空改动凑触达，产出垃圾补丁。
+    - 可应用性：probe_apply 临时 worktree 试打，失败把 git 报错 + 真实文件内容回喂。
+      ctx.git_root 为空时跳过（测试、Fake 生成器），绝不触发 worktree 操作。
+    """
+    hints: list[str] = []
+    probe_ok = True
+
+    changed = set(_changed_files(diff))
+    missing = [pc.path for pc in ctx.proposed_changes if pc.path not in changed]
+    if missing:
+        notes.append(f"第 {attempt + 1} 次生成的补丁漏改了计划文件 {missing}，已带提示重试")
+        parts = [
+            "补丁未触达 Proposed changes 列出的全部文件，漏改：" + "、".join(missing) + "。",
+            "重新生成时必须对这些文件做出 Planned description 所描述的实质语义改动；"
+            "禁止只加注释、noqa、空行或其他无语义改动来凑「文件出现在 diff 里」。",
+        ]
+        git_root = getattr(ctx, 'git_root', '') or ''
+        if git_root:
+            for path in missing:
+                content = _read_repo_file(git_root, path)
+                if content:
+                    parts.append(
+                        f"以下是漏改文件 {path} 的真实内容，从中原样复制上下文，"
+                        "且允许改动其中任何行（不限于 Source context 的行区间）："
+                    )
+                    parts.append("```")
+                    parts.append(content)
+                    parts.append("```")
+        hints.append("\n".join(parts))
+
+    git_root = getattr(ctx, 'git_root', '') or ''
+    if git_root:
+        try:
+            from worktree_service import probe_apply
+            probe = probe_apply(git_root, ctx.base_commit, diff, tag=f"t{ctx.task_id}-{attempt}")
+        except Exception:  # 自检设施故障绝不能阻断生成
+            probe = None
+        if probe is not None and not probe.get('ok'):
+            probe_ok = False
+            notes.append(f"第 {attempt + 1} 次生成的补丁无法应用，已带 git 报错与真实上下文重试")
+            hints.append(probe.get('hint') or probe.get('error') or '补丁无法应用，请重新生成')
+
+    return "\n\n".join(hints), probe_ok
+
+
+def _self_check(ctx: PatchGenerationContext, diff: str, attempt: int, notes: list[str]) -> str:
+    """_self_check_detail 的字符串视图（兼容既有调用与测试）。"""
+    return _self_check_detail(ctx, diff, attempt, notes)[0]
 
 
 def _extract_diff(text: str) -> str:
@@ -319,6 +376,7 @@ class LLMPatchGenerator:
         # Fake 补丁会被判定为 generator_fallback 整条剔除，等于把「补丁打不上」这种
         # 真实失败改写成「模型没产出」，可判定池会凭空缩水（实测一轮从 17 条掉到 6 条）。
         best_unchecked: tuple[str, str, str] | None = None  # (diff, raw, prompt)
+        best_probe_ok = False  # best_unchecked 是否为「可应用」补丁
         for attempt in range(self.max_retries + 1):
             try:
                 raw = await self._call(messages)
@@ -328,11 +386,15 @@ class LLMPatchGenerator:
                 continue
             diff = _extract_diff(raw)
             if diff:
-                # 生成期自检：跑一轮 `git apply`，不可应用就把真实文件内容 + git 报错回喂重试。
+                # 生成期自检：完备性（plan 文件全覆盖）+ 可应用性（git apply 试打）。
                 # 第四轮实测证明「模型在没看过的行区间凭记忆写上下文」才是 apply 失败的主因。
-                hint = _self_check(ctx, diff, attempt, self_check_notes)
+                hint, probe_ok = _self_check_detail(ctx, diff, attempt, self_check_notes)
                 if hint:
-                    best_unchecked = (diff, raw, messages[-1]['content'])
+                    # 保留策略（5A 教训，BENCHMARK §5.2.1）：可应用版本优先——
+                    # 「可应用但不完整」绝不能被后续「corrupt」重试覆盖掉。
+                    if probe_ok or best_unchecked is None or not best_probe_ok:
+                        best_unchecked = (diff, raw, messages[-1]['content'])
+                        best_probe_ok = probe_ok
                     last_reason = hint
                     messages[-1] = {"role": "user", "content": _build_user_prompt(ctx, retry_reason=hint)}
                     continue
