@@ -60,3 +60,4 @@ repos/
 
 # 评测工具链与逐条数据——含本机绝对路径 / 评测集答案 / 模型原始输出，不进公开仓
 scripts/benchmark/
+.aider*
