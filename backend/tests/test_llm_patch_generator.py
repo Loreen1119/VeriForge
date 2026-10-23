@@ -146,3 +146,21 @@ async def test_module_generator_is_fake_without_key(monkeypatch):
     import importlib
     importlib.reload(patch_generator)
     assert isinstance(patch_generator._generator, patch_generator.FakePatchGenerator)
+
+
+def test_llm_timeout_defaults_to_60(monkeypatch):
+    """默认 60s —— 历史轮次的耗时口径靠它保持可比，不许改默认值。"""
+    monkeypatch.delenv("CODEFORGE_LLM_TIMEOUT", raising=False)
+    assert LLMPatchGenerator(api_key="k").timeout == 60.0
+
+
+def test_llm_timeout_env_override(monkeypatch):
+    """换强推理模型时用 env 放宽（2026-10-23 §5.4.3：v4-pro 单次 245s 被 60s 静默误杀）。"""
+    monkeypatch.setenv("CODEFORGE_LLM_TIMEOUT", "600")
+    assert LLMPatchGenerator(api_key="k").timeout == 600.0
+
+
+def test_llm_timeout_explicit_arg_wins(monkeypatch):
+    """显式入参优先于 env（测试与调用方可以精确控制）。"""
+    monkeypatch.setenv("CODEFORGE_LLM_TIMEOUT", "600")
+    assert LLMPatchGenerator(api_key="k", timeout=30.0).timeout == 30.0

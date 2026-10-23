@@ -351,12 +351,17 @@ class LLMPatchGenerator:
 
     def __init__(self, api_key: str, base_url: str = _DEEPSEEK_DEFAULT_BASE_URL,
                  model: str = _DEEPSEEK_DEFAULT_MODEL, max_retries: int = 2,
-                 timeout: float = 60.0, fallback: PatchGenerator | None = None):
+                 timeout: float | None = None, fallback: PatchGenerator | None = None):
         self.api_key = api_key
         self.base_url = base_url.rstrip('/')
         self.model = model
         self.max_retries = max_retries
-        self.timeout = timeout
+        # 60s 是给 deepseek-chat（v4.1-flash 档）定的预算。换强推理模型时这个护栏
+        # 会把「慢」静默判成「生成失败」：v4-pro 单次实测 245s（思考 token 20,537/
+        # 20,701），异常串还是空串，最容易被误读成模型不行（2026-10-23 §5.4.3）。
+        # 要跑慢模型就设 CODEFORGE_LLM_TIMEOUT=600，别改这里的默认值——默认值一改，
+        # 历史轮次的耗时口径就不可比了。
+        self.timeout = timeout if timeout is not None else float(os.environ.get('CODEFORGE_LLM_TIMEOUT', '60'))
         self.fallback = fallback or FakePatchGenerator('valid')
 
     async def generate(self, ctx: PatchGenerationContext) -> PatchGenerationResult:
