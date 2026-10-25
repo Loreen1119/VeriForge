@@ -97,6 +97,13 @@ def syntax_check(worktree: Path, changed_files: list[str]) -> tuple[bool, str]:
     return True, ""
 
 
+def _as_text(value) -> str:
+    """TimeoutExpired.stdout/stderr 在 POSIX 上可能是 bytes（text=True 也不保证解码），统一转 str。"""
+    if value is None:
+        return ""
+    return value.decode("utf-8", "replace") if isinstance(value, bytes) else value
+
+
 def run_allowlisted(command: str, worktree: Path, allowed_commands: list[str] | None = None, timeout_seconds: int = 300) -> dict:
     """跑一条白名单命令；`output` 是展示/落库字段，`report` 才是判定输入（见模块 docstring）。"""
     if allowed_commands is None or command not in allowed_commands:
@@ -107,7 +114,7 @@ def run_allowlisted(command: str, worktree: Path, allowed_commands: list[str] | 
         full = result.stdout + result.stderr
         return {"status": "passed" if result.returncode == 0 else "failed", "exit_code": result.returncode, "output": full[-OUTPUT_DISPLAY_LIMIT:], "timed_out": False, "environment_error": None, "duration_ms": int((time.monotonic() - started) * 1000), "report": _build_report(full)}
     except subprocess.TimeoutExpired as exc:
-        full = (exc.stdout or "") + (exc.stderr or "")
+        full = _as_text(exc.stdout) + _as_text(exc.stderr)
         return {"status": "timed_out", "exit_code": None, "output": full[-OUTPUT_DISPLAY_LIMIT:], "timed_out": True, "environment_error": None, "duration_ms": int((time.monotonic() - started) * 1000), "report": _build_report(full)}
     except (OSError, ValueError) as exc:
         return {"status": "environment_error", "exit_code": None, "output": str(exc), "timed_out": False, "environment_error": str(exc), "duration_ms": int((time.monotonic() - started) * 1000), "report": _build_report("")}
