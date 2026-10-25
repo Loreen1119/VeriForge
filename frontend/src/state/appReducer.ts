@@ -1,7 +1,7 @@
 import type { CodeTask, ConnectionStatus, LogEntry, TaskEvent } from '../types';
 import { describeEvent } from '../utils/eventSummary';
 export interface AppState { connectionStatus: ConnectionStatus; task: CodeTask | null; events: TaskEvent[]; logs: LogEntry[]; streamError: string | null; }
-export const initialAppState: AppState = { connectionStatus: 'idle', task: null, events: [], streamError: null, logs: [{ id: 0, type: 'system', timestamp: new Date().toLocaleTimeString(), phase: '系统就绪', message: 'CodeForge 已就绪', status: 'ok' }] };
+export const initialAppState: AppState = { connectionStatus: 'idle', task: null, events: [], streamError: null, logs: [{ id: 0, type: 'system', timestamp: new Date().toLocaleTimeString(), phase: '系统就绪', message: 'VeriForge 已就绪', status: 'ok' }] };
 export type AppAction = { type: 'TASK_CREATED'; payload: CodeTask } | { type: 'TASK_SELECTED'; payload: CodeTask } | { type: 'TASK_UPDATED'; payload: CodeTask } | { type: 'EVENT'; payload: TaskEvent } | { type: 'REPLAY'; payload: TaskEvent[] } | { type: 'CONNECTION'; payload: ConnectionStatus } | { type: 'STREAM_ABORTED'; payload: string } | { type: 'ERROR'; payload: string };
 // 日志 id 必须全局唯一：不能用数组下标（过滤后 id 会撞 React key）
 let nextLogId = 1;

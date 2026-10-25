@@ -1,4 +1,4 @@
-"""SQLite persistence for the CodeForge domain."""
+"""SQLite persistence for the VeriForge domain."""
 from pathlib import Path
 import os
 import aiosqlite

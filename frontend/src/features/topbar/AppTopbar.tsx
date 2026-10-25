@@ -23,7 +23,7 @@ export function AppTopbar({ sidebarOpen, canCreateTask, onToggleSidebar, onOpenR
       </button>
 
       <div className="app-brand">
-        <h1>CodeForge</h1>
+        <h1>VeriForge</h1>
         <p>可追踪、可审查的代码维护任务平台</p>
       </div>
 

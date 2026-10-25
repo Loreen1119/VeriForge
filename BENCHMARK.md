@@ -1,9 +1,9 @@
-# CodeForge 编码 Agent 评测基准（BENCHMARK）
+# VeriForge 编码 Agent 评测基准（BENCHMARK）
 
-> 本文件是 CodeForge 的真实 issue 评测记录，所有数字**实测后填写**，不估、不借、不编。
+> 本文件是 VeriForge 的真实 issue 评测记录，所有数字**实测后填写**，不估、不借、不编。
 > 红线规则见文末「红线检查清单」，任何一处触碰即判定该次评测作废。
 >
-> **所有实验基准：deepseek-chat（DeepSeek 官方 OpenAI 兼容端点）**（含 CodeForge 主跑 + Aider + 纯 GPT baseline，同模型版本同 prompt）
+> **所有实验基准：deepseek-chat（DeepSeek 官方 OpenAI 兼容端点）**（含 VeriForge 主跑 + Aider + 纯 GPT baseline，同模型版本同 prompt）
 
 **状态**：🟢 四轮有效跑批 + 判定完成（2026-10-18）。19 条有效 issue 每轮各跑完一次；最近一轮（生成期自检）计入 **M=17**（`14125` / `14905` 两条生成器回退不计入）。**结果为实测值，未做任何人工修正。** 中间另有两轮跑批作废（放大检索上下文窗口、被 API 余额耗尽截断），见 §9.3。**[K] Aider baseline 已于 2026-10-21 完成：pass@1 = 2/10（绝对条数），落灰区——未达 ≥3/10 开 P0-2 门槛、未落 ≤1/10 全停档，见 §5.1.5/§5.1.6。**
 

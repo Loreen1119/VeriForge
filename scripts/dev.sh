@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CodeForge 本地开发引导脚本（Git Bash / WSL / macOS 通用）
+# VeriForge 本地开发引导脚本（Git Bash / WSL / macOS 通用）
 #
 # 用法：
 #   ./scripts/dev.sh setup     # 安装前后端依赖（幂等，可重复执行）

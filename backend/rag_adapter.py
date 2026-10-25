@@ -1,6 +1,6 @@
-"""Local repository search adapter used by CodeForge retrieval.
+"""Local repository search adapter used by VeriForge retrieval.
 
-The legacy provider hook is intentionally rejected. CodeForge owns repository
+The legacy provider hook is intentionally rejected. VeriForge owns repository
 boundaries and result validation, so retrieval stays inside local source roots.
 """
 from __future__ import annotations

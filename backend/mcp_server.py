@@ -1,4 +1,4 @@
-"""CodeForge 的 MCP 工具面：把「代码检索」与「白名单测试执行」暴露成 Agent 可自主调用的能力单元。
+"""VeriForge 的 MCP 工具面：把「代码检索」与「白名单测试执行」暴露成 Agent 可自主调用的能力单元。
 
 与 HTTP API 的差别不在能力，而在**调用方**：HTTP 面向前端与外部脚本，MCP 面向 Agent。
 所以这一层的设计约束是：
@@ -28,11 +28,11 @@ from task_service import list_repositories as _list_repositories
 from test_runner import run_allowlisted
 from worktree_service import worktree_path
 
-SERVER_NAME = 'codeforge'
+SERVER_NAME = 'veriforge'
 SERVER_VERSION = '0.1.0'
 
 SERVER_INSTRUCTIONS = (
-    'CodeForge 的代码维护能力。先调用 list_repositories 拿到仓库 id 与它的安全边界；'
+    'VeriForge 的代码维护能力。先调用 list_repositories 拿到仓库 id 与它的安全边界；'
     '源码范围与可执行命令都以仓库配置为准，不接受调用方指定路径或任意命令。'
 )
 

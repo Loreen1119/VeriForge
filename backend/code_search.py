@@ -1,4 +1,4 @@
-"""Bounded, dependency-free source search for CodeForge repositories."""
+"""Bounded, dependency-free source search for VeriForge repositories."""
 from __future__ import annotations
 
 import re

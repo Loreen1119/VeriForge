@@ -1,4 +1,4 @@
-"""Pydantic contracts for CodeForge Phase 1."""
+"""Pydantic contracts for VeriForge Phase 1."""
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field

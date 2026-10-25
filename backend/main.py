@@ -1,4 +1,4 @@
-"""CodeForge Phase 1 API: repositories, code tasks, durable events and SSE replay."""
+"""VeriForge Phase 1 API: repositories, code tasks, durable events and SSE replay."""
 import asyncio, json, os, sqlite3
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -23,9 +23,9 @@ async def lifespan(app):
     await recover_zombie_tasks()
     yield
     await shutdown_unfinished_tasks()
-api=FastAPI(title='CodeForge API',version='0.1.0',description='可追踪、可审查的代码维护任务平台',lifespan=lifespan)
+api=FastAPI(title='VeriForge API',version='0.1.0',description='可追踪、可审查的代码维护任务平台',lifespan=lifespan)
 @api.get('/health')
-async def health(): return {'status':'ok','service':'codeforge'}
+async def health(): return {'status':'ok','service':'veriforge'}
 def _repo(row):
     d=dict(row); d['allowed_source_roots']=json.loads(d['allowed_source_roots']); d['allowed_test_commands']=json.loads(d['allowed_test_commands']); return d
 @api.post('/api/repositories',response_model=RepositoryResponse,status_code=201)

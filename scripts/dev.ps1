@@ -1,4 +1,4 @@
-# CodeForge 本地开发引导脚本（PowerShell）
+# VeriForge 本地开发引导脚本（PowerShell）
 #
 # 用法：
 #   .\scripts\dev.ps1 setup     # 安装前后端依赖（幂等）

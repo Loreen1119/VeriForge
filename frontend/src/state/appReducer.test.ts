@@ -13,7 +13,7 @@ function makeEvent(seq: number, overrides: Partial<TaskEvent> = {}): TaskEvent {
   };
 }
 
-describe('CodeForge task reducer', () => {
+describe('VeriForge task reducer', () => {
   it('stores a created code task and starts connection state', () => {
     const task = { id: 1, repository_id: 2, issue_title: '修复校验', issue_body: '补充边界检查', status: 'pending', attempt_number: 0, created_at: 'now' };
     const next = appReducer(initialAppState, { type: 'TASK_CREATED', payload: task });
